@@ -14,8 +14,9 @@ Tested using g++ (GCC) 8.3.1 20190223 (Red Hat 8.3.1-2)
 
 
 ## Run
+Both input file and output files are optional  
 ```console
-./a.out OCUSF.dat
+./a.out OCUSF.dat results.json
 ```
 Results generated are the same as in book
 
