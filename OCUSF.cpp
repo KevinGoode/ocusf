@@ -4,7 +4,7 @@
 	This program converted from BASIC to 'C' by K.Goode from original model in 
 	"Water and Wasterwater Engineering Hydraulics"
 
-	NB. Conversion sacrifices programminhg elegance for consistency with original code eg Using many global variables
+	NB. Conversion sacrifices programming elegance for consistency with original code eg Using many global variables
 	NB. However, all gotos removed .
 */
 #define TRUE (1)
