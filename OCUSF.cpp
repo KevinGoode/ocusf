@@ -82,7 +82,8 @@ void ReadInputParameters(int numArgs, char **argv);
 void Initialise(double *A, double *P,double *TW);
 void InitialiseFlowAndDepth(double *A, double *P,double *TW,double SteadyDepth,double SteadyFlow);
 void OutputFlowAndDepthHeaders();
-void OutputFlowAndDepthRecords();
+void OutputFlowAndDepthRecords(bool init, int numArgs, char **argv);
+void OutputFlowAndDepthFooters(int numArgs, char **argv);
 void CheckBoundaryConditions(double *QUS,double *QDS);
 //Extra utilitiy methods
 void ArraySet(double *pArray,double value,int size);
@@ -109,7 +110,7 @@ int main(int numArgs, char **argv)
 	T=0.0;
     
 	OutputFlowAndDepthHeaders();
-	OutputFlowAndDepthRecords();
+	OutputFlowAndDepthRecords(TRUE, numArgs, argv);
 	
     int COUNT=0;
     for(COUNT=0;COUNT<NITER;COUNT++)
@@ -235,11 +236,11 @@ int main(int numArgs, char **argv)
         if(fabs(ceil((double)COUNT/2.0) -floor((double)COUNT/2.0))>SMALL_NUM)
 		{
 			//Even COUNT numbers only
-			OutputFlowAndDepthRecords();
+			OutputFlowAndDepthRecords(FALSE, numArgs, argv);
 		}
 	
 	}
-
+    OutputFlowAndDepthFooters(numArgs, argv);
 	return 0;
 }
 //a.k.a GOSUB 2060
@@ -430,7 +431,7 @@ void ReadInputParameters(int numArgs, char **argv)
 	FILE* fInputFile=NULL;
 	bool bInputFile=FALSE;
 	int NO=0;
-	if(numArgs == 2)
+	if(numArgs >= 2)
 	{
 		fInputFile =fopen(argv[1],"r");
 		if(fInputFile > 0)bInputFile=TRUE;
@@ -509,7 +510,19 @@ void OutputFlowAndDepthHeaders()
 	printf("-TIME---------------------DISTANCE ALONG CHANNEL------------------\n");
 	printf("-(MIN)---0.0L     0.2L     0.4L     0.6L     0.8L     1.0L--------\n");
 }
-void OutputFlowAndDepthRecords()
+void OutputFlowAndDepthFooters(int numArgs, char **argv)
+{
+	FILE* fOutputFile=NULL;
+	if(numArgs >= 3)
+	{   
+		int n=0;
+		char line[256];
+		fOutputFile =fopen(argv[2],"a+");
+		fprintf(fOutputFile, "]}");
+		fclose(fOutputFile);
+	}
+}
+void OutputFlowAndDepthRecords(bool init, int numArgs, char **argv)
 {
 	int i=0;
 	printf(" %02.2lf ",TM);
@@ -517,6 +530,31 @@ void OutputFlowAndDepthRecords()
 	printf("   Q (m^3/s)\n      ");
 	for(i=0;i<N;i+=N/5) printf("  %02.3lf  ",Y[i]);
 	printf("  %02.3lf  [%02.3lf  %02.3lf  ]",Y[NS-1],CurrentWaterBalance,CumulativeWaterBalance);printf("   Depth (m)[Balance (m3), CumBalance(m3)]\n");
+    
+	//Also write to json file
+	FILE* fOutputFile=NULL;
+	if(numArgs >= 3)
+	{   
+		int n=0;
+		char line[256];
+		fOutputFile =fopen(argv[2],"a+");
+		if (init)
+		{
+			fprintf(fOutputFile, "{\"results\": [\n");
+		}
+		else
+		{
+			fprintf(fOutputFile, ",\n");
+		}
+		for(i=0;i<N;i+=N/5)
+		{
+			n+=sprintf((&line[0])+n,"{\"pos\":\"0.%dL\",\"q\":\"%02.3lf\",\"d\":\"%02.3lf\"},", i, Q[i], Y[i]);
+		}
+		sprintf((&line[0]+n),"{\"pos\":\"1.0L\",\"q\":\"%02.3lf\",\"d\":\"%02.3lf\"}", Q[NS-1], Y[NS-1]);
+		fprintf(fOutputFile, "{\"secs\":\"%02.2lf\",\"data\": [%s],\"bal\":\"%02.3lf\", \"cum\":\"%02.3lf\"}",  T, line,CurrentWaterBalance,CumulativeWaterBalance);
+        fclose(fOutputFile);
+	}
+
 }
 void CheckBoundaryConditions(double *QUS,double *QDS)
 {
