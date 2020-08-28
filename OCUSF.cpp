@@ -548,10 +548,10 @@ void OutputFlowAndDepthRecords(bool init, int numArgs, char **argv)
 		}
 		for(i=0;i<N;i+=N/5)
 		{
-			n+=sprintf((&line[0])+n,"{\"pos\":\"0.%dL\",\"q\":\"%02.3lf\",\"d\":\"%02.3lf\"},", i, Q[i], Y[i]);
+			n+=sprintf((&line[0])+n,"{\"pos\":\"0.%dL\",\"q\":%02.3lf,\"d\":%02.3lf},", i, Q[i], Y[i]);
 		}
-		sprintf((&line[0]+n),"{\"pos\":\"1.0L\",\"q\":\"%02.3lf\",\"d\":\"%02.3lf\"}", Q[NS-1], Y[NS-1]);
-		fprintf(fOutputFile, "{\"secs\":\"%02.2lf\",\"data\": [%s],\"bal\":\"%02.3lf\", \"cum\":\"%02.3lf\"}",  T, line,CurrentWaterBalance,CumulativeWaterBalance);
+		sprintf((&line[0]+n),"{\"pos\":\"1.0L\",\"q\":%02.3lf,\"d\":%02.3lf}", Q[NS-1], Y[NS-1]);
+		fprintf(fOutputFile, "{\"secs\":%02.2lf,\"data\": [%s],\"bal\":%02.3lf, \"cum\":%02.3lf}",  T, line,CurrentWaterBalance,CumulativeWaterBalance);
         fclose(fOutputFile);
 	}
 
