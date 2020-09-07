@@ -1,0 +1,28 @@
+{
+    // See following link to debug in vs code
+    // NOTE: If you 'make debug' from commandline the just need this file (IE do not need task) 
+    // https://code.visualstudio.com/docs/cpp/config-linux#:~:text=Debug%20helloworld.&text=json%20file%20to%20configure%20VS,build%20and%20debug%20active%20file.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/ocusf.exe",
+            "args": ["OCUSF.dat", "OCUSF.json"],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}

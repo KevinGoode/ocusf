@@ -1,13 +1,12 @@
 # NOTE make needs tabs in indented lines
-appname := ocusf.exe
+# Need to install g++, make ccpunit-devel
+appname := ocusf_tests.exe
 
 CXX := g++
 CXXFLAGS := 
 LDFLAGS := 
-LDLIBS := 
-#Need to explictly name files because don't want to include test files
-#srcfiles := $(shell find . -name "*.cpp")
-srcfiles := OCUSF.cpp utils.cpp
+LDLIBS := -lcppunit
+srcfiles := main.cpp ../utils.cpp
 objects  := $(patsubst %.cpp, %.o, $(srcfiles))
 
 all: $(appname)
