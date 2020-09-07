@@ -8,7 +8,7 @@ This program converted from BASIC to 'C' by K.Goode from original model in  "Wat
 
 ## Build
 ```console
-g++ OCUSF.cpp
+make
 ```
 Tested using g++ (GCC) 8.3.1 20190223 (Red Hat 8.3.1-2)
 
@@ -16,7 +16,7 @@ Tested using g++ (GCC) 8.3.1 20190223 (Red Hat 8.3.1-2)
 ## Run
 Both input file and output files are optional  
 ```console
-./a.out OCUSF.dat results.json
+./ocusf.exe OCUSF.dat results.json
 ```
 Results generated are the same as in book
 

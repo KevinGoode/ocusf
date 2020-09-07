@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include "utils.hpp"
 /*
 	This program converted from BASIC to 'C' by K.Goode from original model in 
 	"Water and Wasterwater Engineering Hydraulics"
@@ -7,13 +8,12 @@
 	NB. Conversion sacrifices programming elegance for consistency with original code eg Using many global variables
 	NB. However, all gotos removed .
 */
-#define TRUE (1)
-#define FALSE (0)
+
 #define SIZE_OF_LINE (64)
 #define SIZE_OF_ARRAY (100)
 #define SMALL_NUM (0.000001)
 char line[SIZE_OF_LINE];
-enum XAREA{CIRC=0,RECT,TRAP};
+
 double Y[SIZE_OF_ARRAY],V[SIZE_OF_ARRAY],YP[SIZE_OF_ARRAY],VP[SIZE_OF_ARRAY],C[SIZE_OF_ARRAY],Q[SIZE_OF_ARRAY],SF[SIZE_OF_ARRAY];
 //WB=StoredAtStart+Qin-StoredAtEnd-Qout;
 double FlowIn=0.0;
@@ -24,40 +24,13 @@ void InitWaterBalance(double dx);
 double CalculateVolumeStored(double dx);
 double CalculateWaterBalance(double dx, double dt);
 double CalculateNetFlowIn();
-struct ChannelShape
-{
-	double Diameter;//D (m)
-	double Width;//B (m)
-	double SideWallAngle;//FI (deg)
-	double Length;//XL (m)
-	double ManningsValue;//MN
-	double BedSlope;//S0 (sin theta);
-	XAREA  CrossSectionShape;
-};
-enum BoundaryConditionVariable{FLOW=1,DEPTH};
-struct BoundaryConditions
-{
-	BoundaryConditionVariable Variable;
-	double RateOfChange;
-	double FinalValue;
-};
-struct ChannelBoundaryConditions
-{
-	BoundaryConditions UpStream;
-	BoundaryConditions DownStream;
-};
-struct ChannelInitialConditions
-{
-	double Flow; //(m3/s)
-	double USDepth; //(m)
-};
+
 struct ChannelShape Channel;
 struct ChannelBoundaryConditions BoundaryConditions;
 struct ChannelInitialConditions InitConditions;
 
 int N=0;//Number of reaches into which the channel length is divided.
 int NITER=0;//Number of computational iterations
-double G=9.806; //Acceleration due to gravity m3/s
 int NS=0;//Number of computational nodes (N+1)
 double DX=0.0;//Distance step (m)
 double DT=0.0;//Time step (s)
@@ -68,14 +41,12 @@ double DXI=0.0; //(m)
 double ZETA=0.0; //(dimensionless)
 
 
-//GOSUB routines
-void CalculateSteadyFlowDepth(double Q,double *A, double *P,double *TW,double *SteadyDepth,double *SteadyFlow); //a.k.a. GOSUB 2060 in original code
-void CalculateSectionFlowParameters(double YY,double *A, double *P,double *TW);//a.k.a. GOSUB 1860 in original code
-void Calculate_Q_C_SF(double VV,double A,double P,double TW,double *QCur,double *CCur,double *SFCur);//a.k.a. GOSUB 2010 in original code
+//GOSUB routines (NOTE OTHER GOSUBS in utils.cpp)
 void UStreamBoundaryFinalFlowCheck(double *QUS);//a.k.a. GOSUB 2210 in original code
 void UStreamBoundaryFinalDepthCheck();//a.k.a. GOSUB 2270 in original code
 void DStreamBoundaryFinalFlowCheck(double *QDS);//a.k.a. GOSUB 2340 in original code
 void DStreamBoundaryFinalDepthCheck();//a.k.a. GOSUB 2400 in original code
+
 
 //New routines
 void ReadInputParameters(int numArgs, char **argv);
@@ -102,7 +73,7 @@ int main(int numArgs, char **argv)
 	/*Option of passing data from input file*/
 	ReadInputParameters(numArgs, argv);
 
-	G=9.809;NS=N+1;
+	NS=N+1;
 	
 	Initialise(&A, &P,&TW);
 	DX=Channel.Length/(double)N;
@@ -143,16 +114,16 @@ int main(int numArgs, char **argv)
 			VR=(V[k]+TH*(C[k]*V[k-1]-V[k]*C[k-1]))/(1.00+TH*(V[k]-V[k-1]+CA));
 			CR=(C[k]-VR*TH*CA)/(1.0+TH*CA);
 			YR=Y[k]-TH*(VR+CR)*(Y[k]-Y[k-1]);
-			CalculateSectionFlowParameters(YR,&A, &P,&TW);
-			Calculate_Q_C_SF(VR,A,P,TW,&QCur,&CCur,&SFCur);
+			CalculateSectionFlowParameters(Channel, YR,&A, &P,&TW);
+			Calculate_Q_C_SF(Channel,VR,A,P,TW,&QCur,&CCur,&SFCur);
 			CR=CCur;SR=SFCur;
 
 			CB=C[k]-C[k+1];
 			VS=(V[k]-TH*(V[k]*C[k+1]-C[k]*V[k+1]))/(1.00-TH*(V[k]-V[k+1]-CB));
 			CS=(C[k]+VS*TH*CB)/(1.0+TH*CB);
 			YS=Y[k]+TH*(VS-CS)*(Y[k]-Y[k+1]);
-			CalculateSectionFlowParameters(YS,&A, &P,&TW);
-			Calculate_Q_C_SF(VS,A,P,TW,&QCur,&CCur,&SFCur);
+			CalculateSectionFlowParameters(Channel,YS,&A, &P,&TW);
+			Calculate_Q_C_SF(Channel,VS,A,P,TW,&QCur,&CCur,&SFCur);
 			CS=CCur;SS=SFCur;
 
 			YP[k]=(YS*CR+YR*CS+CR*CS*((VR-VS)/G-DT*(SR-SS)))/(CR+CS);
@@ -165,8 +136,8 @@ int main(int numArgs, char **argv)
 		VS=(V[0]-TH*(V[0]*C[1]-C[0]*V[1]))/(1.0-TH*(V[0]-V[1]-CB));
 		CS=(C[0]+VS*TH*CB)/(1.0+TH*CB);
 		YS=Y[0]+TH*(VS-CS)*(Y[0]-Y[1]);
-        CalculateSectionFlowParameters(YS,&A, &P,&TW);
-		Calculate_Q_C_SF(VS,A, P,TW,&QCur,&CCur,&SFCur);
+        CalculateSectionFlowParameters(Channel,YS,&A, &P,&TW);
+		Calculate_Q_C_SF(Channel,VS,A, P,TW,&QCur,&CCur,&SFCur);
 		double C2=0.0,CM=0.0;
 		double FY=0.0,FDY=0.0,DELY=0.0;
 		C2=G/CCur;
@@ -179,7 +150,7 @@ int main(int numArgs, char **argv)
 			bool bNotConverged=TRUE;
 			while(bNotConverged)
 			{
-				CalculateSectionFlowParameters(YY,&A, &P,&TW);
+				CalculateSectionFlowParameters(Channel,YY,&A, &P,&TW);
 				FY=QUS/A-C2*YY-CM;
 				FDY=-(QUS/pow(A,2))*TW-C2;
 				DELY=-FY/FDY;
@@ -195,8 +166,8 @@ int main(int numArgs, char **argv)
 		VR=(V[NS-1]+TH*(C[NS-1]*V[N-1]-V[NS-1]*C[N-1]))/(1.0+TH*(V[NS-1]-V[N-1]+CA));
 		CR=(C[NS-1]-VR*TH*CA)/(1.0+TH*CA);
 		YR=Y[NS-1]-TH*(VR+CR)*(Y[NS-1]-Y[N-1]);
-		CalculateSectionFlowParameters(YR,&A, &P,&TW);
-		Calculate_Q_C_SF(VR,A, P,TW,&QCur,&CCur,&SFCur);
+		CalculateSectionFlowParameters(Channel,YR,&A, &P,&TW);
+		Calculate_Q_C_SF(Channel,VR,A, P,TW,&QCur,&CCur,&SFCur);
 		double C4=G/CCur;
 		double CP=VR+C4*YR-G*DT*(SFCur-Channel.BedSlope);
 		if( BoundaryConditions.DownStream.Variable != DEPTH)
@@ -206,7 +177,7 @@ int main(int numArgs, char **argv)
 			bool bNotConverged=TRUE;
 			while(bNotConverged)
 			{
-				CalculateSectionFlowParameters(YY,&A, &P,&TW);
+				CalculateSectionFlowParameters(Channel,YY,&A, &P,&TW);
 				FY=QDS/A+C4*YY-CP;
 				FDY=-(QDS/pow(A,2))*TW+C4;
 				DELY=-FY/FDY;
@@ -221,8 +192,8 @@ int main(int numArgs, char **argv)
 		int m=0;
 		for(m=0;m<NS;m++)
 		{
-			CalculateSectionFlowParameters(YP[m],&A,&P,&TW);
-			Calculate_Q_C_SF(VP[m],A,P,TW,&QCur,&CCur,&SFCur);
+			CalculateSectionFlowParameters(Channel,YP[m],&A,&P,&TW);
+			Calculate_Q_C_SF(Channel,VP[m],A,P,TW,&QCur,&CCur,&SFCur);
 			V[m]=VP[m];
 			Q[m]=V[m]*A;
 			C[m]=CCur;
@@ -242,98 +213,6 @@ int main(int numArgs, char **argv)
 	}
     OutputFlowAndDepthFooters(numArgs, argv);
 	return 0;
-}
-//a.k.a GOSUB 2060
-void CalculateSteadyFlowDepth( double QCur, double *A, double *P,double *TW,double *YN, double *VN)
-{
-	double FSR=pow(Channel.BedSlope,0.5);
-	double HII=40.0,LOO=0.001,RH=0.0,FSH=0.0,WW=0.0,Z=0.0;
-	bool bNotConverged=TRUE;
-	if(Channel.CrossSectionShape==CIRC) HII=Channel.Diameter;
-	double YY=0.0;
-	while(bNotConverged)
-	{
-		YY=(HII+LOO)/2.0;
-		CalculateSectionFlowParameters(YY,A, P,TW);
-		RH=*A/(*P);
-		FSH=Channel.ManningsValue*QCur/((*A)*pow(RH,0.67));
-		WW=FSH-FSR;
-		if(WW >0)
-		{
-			LOO=YY;
-		}
-		else
-		{
-			HII=YY;
-		}
-		Z=(HII+LOO)/2.0;
-		bNotConverged=(fabs(Z-YY)>.0002);
-	}
-	*YN=YY;
-	*VN=InitConditions.Flow/(*A);
-	return;
-}
-//a.k.a. GOSUB 1860
-void CalculateSectionFlowParameters(double YY,double *A, double *P,double *TW)
-{
-	double D=Channel.Diameter;
-	double B=Channel.Width;
-    double FI=Channel.SideWallAngle*3.142/180.0;//Side wall angle in radians
-
-	switch(Channel.CrossSectionShape)
-	{
-		case CIRC:
-		{
-			double HI=3.1416,LO=0.000,EST=0.0,XR=0.0,Z=0.0;
-			bool bNotConverged=TRUE;
-			while(bNotConverged)
-			{
-				EST =(HI+LO)/2.0;
-				XR=1.0-(2.0*YY)/Channel.Diameter-cos(EST);
-				if(XR<0)
-				{
-					LO=EST;
-				}
-				else
-				{
-					HI=EST;
-				}
-				Z=(HI+LO)/2.0;
-				bNotConverged=(fabs(Z-EST)>0.001);
-			}
-			*P=D*EST;
-            *A=0.25*D*D*(EST-0.5*sin(2.0*EST));
-			*TW=D*sin(EST);
-			break;
-		}
-		case RECT:
-		{
-			*A=B*YY;
-            *P=(B+2.0*YY);
-            *TW=B;
-			break;
-		}
-		case TRAP:
-		{
-			*A=YY*(B+YY/tan(FI));
-			*P=B+2*YY/(sin(FI));
-            *TW=B+2.0*YY/tan(FI);
-			break;
-		}
-		default:
-		{
-			printf("Error\n");
-			break;
-		}
-	}
-	return;
-}
-//a.k.a. GOSUB 2010
-void Calculate_Q_C_SF(double VV,double A,double P,double TW, double *QCur,double *CCur,double *SFCur)
-{   double MN=Channel.ManningsValue;
-	*QCur=VV*A;
-	*CCur=pow((G*A/TW),0.5);
-	*SFCur=MN*MN*pow((P/A),1.33333)*VV*fabs(VV);
 }
 //TODO both flow and depth cheacks can be consolidated from 4 routines into 2
 //a.ka. GOSUB 2210
@@ -573,7 +452,7 @@ void Initialise(double *A, double *P,double *TW)
 	if (fabs(InitConditions.Flow-0.0)>SMALL_NUM)
 	{ 
 		double QCur=fabs(InitConditions.Flow);
-		CalculateSteadyFlowDepth(QCur,A,P,TW,&SteadyDepth,&SteadyVelocity);
+		CalculateSteadyFlowDepth(InitConditions, Channel, QCur,A,P,TW,&SteadyDepth,&SteadyVelocity);
 	}
     //Assignment of initial values to variables
 
@@ -596,8 +475,8 @@ void InitialiseFlowAndDepth(double *A, double *P,double *TW,double SteadyDepth, 
 			V[i]=SteadyVelocity;
 			Y[i]=SteadyDepth;
 		}
-		CalculateSectionFlowParameters(Y[i],A,P,TW);
-		Calculate_Q_C_SF(V[i],*A,*P,*TW,&QCur,&CCur,&SFCur);
+		CalculateSectionFlowParameters(Channel,Y[i],A,P,TW);
+		Calculate_Q_C_SF(Channel,V[i],*A,*P,*TW,&QCur,&CCur,&SFCur);
 		SF[i]=SFCur;
 		Q[i]=InitConditions.Flow;
 		C[i]=CCur;
@@ -626,7 +505,7 @@ double CalculateVolumeStored(double dx)
 	for(i=1;i<N;i++)
     {
         double A,P,TW;
-        CalculateSectionFlowParameters((Y[i]+Y[i+1])/2.0,&A, &P,&TW);
+        CalculateSectionFlowParameters(Channel,(Y[i]+Y[i+1])/2.0,&A, &P,&TW);
         stored+=dx*A;
     }
     return stored;
