@@ -8,7 +8,7 @@ This program converted from BASIC to 'C' by K.Goode from original model in  "Wat
 ## Prerequistes
 1. g++
 2. make
-3. cppunit-devel (to build nad run tests)
+3. cppunit-devel (to build and run tests)
 4. gdb (to debug code , tests)
 
 ## Build

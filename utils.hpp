@@ -1,6 +1,7 @@
 #define TRUE (1)
 #define FALSE (0)
 const double G=9.806; //Acceleration due to gravity m3/s
+const double PI = 3.1416;
 enum XAREA{CIRC=0,RECT,TRAP};
 struct ChannelShape
 {

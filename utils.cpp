@@ -42,7 +42,7 @@ void CalculateSectionFlowParameters(ChannelShape channel, double YY,double *A, d
 	*/
 	double D=channel.Diameter;
 	double B=channel.Width;
-    double FI=channel.SideWallAngle*3.142/180.0;//Side wall angle in radians
+    double FI=channel.SideWallAngle*PI/180.0;//Side wall angle in radians
 
 	switch(channel.CrossSectionShape)
 	{
@@ -51,7 +51,7 @@ void CalculateSectionFlowParameters(ChannelShape channel, double YY,double *A, d
 			// EST is angle in radians from vertical of line joining centre of circle and water surface 
 			// touching perimter of circle. IE wetted perimeter, P = Circum *2*EST/2Pi = 2Pi.r*EST/Pi = D*EST
 			// and top water width TW = 2*r*sin(EST) = D*sin(EST) 
-			double HI=3.1416,LO=0.000,EST=0.0,XR=0.0,Z=0.0;
+			double HI=PI,LO=0.000,EST=0.0,XR=0.0,Z=0.0;
 			bool bNotConverged=TRUE;
 			while(bNotConverged)
 			{
@@ -68,8 +68,11 @@ void CalculateSectionFlowParameters(ChannelShape channel, double YY,double *A, d
 				Z=(HI+LO)/2.0;
 				bNotConverged=(fabs(Z-EST)>0.001);
 			}
-			*P=D*EST; 
-            *A=0.25*D*D*(EST-0.5*sin(2.0*EST)); // This looks wrong- TODO CHECK
+			*P=D*EST;
+			//Equation for area derived from (2.EST/2Pi).Pi.R^2-0.5*BxH
+			//(where B is base of full triangle and H is height of triangle).
+			//Substitute in B/sin(2EST) =  R/COS(EST) (sine rule) and substitute in H=RCos(EST)
+            *A=0.25*D*D*(EST-0.5*sin(2.0*EST)); 
 			*TW=D*sin(EST);
 			break;
 		}

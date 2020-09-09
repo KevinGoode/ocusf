@@ -1,3 +1,4 @@
+#include <math.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include "../utils.hpp"
 class TestUtils : public CppUnit::TestFixture {
@@ -29,6 +30,7 @@ class TestUtils : public CppUnit::TestFixture {
       }
       void testCircleSectionParameters()
       {
+        double a,tw,p;
         ChannelShape channel;
         channel.CrossSectionShape = CIRC;
         channel.Diameter = 10.000;
@@ -47,6 +49,38 @@ class TestUtils : public CppUnit::TestFixture {
         CPPUNIT_ASSERT( A > 78.4 &&  A < 78.6); // Full should be A=78.55
         CPPUNIT_ASSERT( P > 31.3 &&  P < 31.5 ); // Full should be P=31.42
         CPPUNIT_ASSERT( TW > 0 &&  TW < 0.02); // Full should be TW=0.000
+        //Y = 2.5
+        YY = 2.5;
+        CalculateSectionFlowParameters(channel,YY,&A,&P,&TW);
+        getCircularSectionParams(channel.Diameter/2.0, YY, &a,&tw,&p);
+        check(TW,tw,0.1); //8.66
+        check(P,p,0.1); //10.47
+        check(A,a,0.5); //15.37 NOTE Area not quite as accurate!
+        //Y = 7.5
+        YY = 7.5;
+        CalculateSectionFlowParameters(channel,YY,&A,&P,&TW);
+        getCircularSectionParams(channel.Diameter/2.0, YY, &a,&tw,&p);
+        check(TW,tw,0.1); //8.66 NOTE THIS IS SAME AS WHEN DEPTH=2.5 WHICH IS CORRECT
+        check(P,p,0.1); //20.94
+        check(A,a,0.5); //63.16 NOTE Area not quite as accurate!
+      }
+      void getCircularSectionParams(double radius, double depth, double *a, double*tw, double*p){
+          //Gets circular params in different way to original code.
+          //Original code uses linear bisection to solve non-linear function of angle.
+          //This code uses arc cosine.
+          double ht =radius-depth;
+          double angle = acos(ht/radius);
+          double rSquared = pow(radius,2.0);
+          *p=2.0*angle*radius;
+          *tw = 2.0*radius*sin(angle);
+          *a = (angle*rSquared)-ht*sin(angle)*radius;
+      }
+      void check(double value, double expected, double x){
+        //check value is within 'x' percent of expected value
+        double percentage=x/100.00;
+        double high = expected*(1.0+percentage);
+        double low = expected*(1.0-percentage);
+        CPPUNIT_ASSERT( value > low &&  value < high);
       }
       void testRectSectionParameters()
       {
